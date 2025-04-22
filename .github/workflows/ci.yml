@@ -1,0 +1,71 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: ['*']  # cualquier rama
+  pull_request:
+    branches: ['*']
+
+env:
+  POSTGRES_USER: testuser
+  POSTGRES_PASSWORD: testpass
+  POSTGRES_DB: testdb
+  REDIS_PASSWORD: redispass
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        command: ["redis-server", "--requirepass", "${{ env.REDIS_PASSWORD }}"]
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli -a ${{ env.REDIS_PASSWORD }} ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 pytest
+
+      - name: Wait for DB and Redis to be ready
+        run: |
+          until pg_isready -h localhost -p 5432; do echo "Waiting for Postgres..."; sleep 2; done
+          until redis-cli -a $REDIS_PASSWORD ping | grep PONG; do echo "Waiting for Redis..."; sleep 2; done
+        env:
+          REDIS_PASSWORD: ${{ env.REDIS_PASSWORD }}
+
+      - name: Run flake8 (code style check)
+        run: flake8 .
+
+      - name: Run pytest (tests)
+        run: pytest --maxfail=1 --disable-warnings -v
