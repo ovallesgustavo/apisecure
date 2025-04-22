@@ -69,5 +69,5 @@ jobs:
         run: flake8 .
 
       - name: Run pytest (tests)
-        run: pytest --maxfail=1 --disable-warnings -v
+        run: python -m pytest --maxfail=1 --disable-warnings -v
 
