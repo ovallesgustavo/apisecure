@@ -1,6 +1,8 @@
 # app/utils/crypto_utils.py
 from cryptography.fernet import Fernet
 from app.core.config import settings
+import binascii
+import traceback
 
 # Clave de encriptación para el email
 cipher_suite = Fernet(settings.encryption_key.encode())
@@ -13,4 +15,16 @@ def encrypt_data(data: str) -> str:
 
 def decrypt_data(encrypted_data: str) -> str:
     """Desencripta datos usando Fernet."""
-    return cipher_suite.decrypt(encrypted_data.encode()).decode()
+    try:
+        # Asegúrate de que encrypted_data sea una cadena válida
+        if not encrypted_data or not isinstance(encrypted_data, str):
+            raise ValueError("Invalid encrypted data: must be a non-empty string")
+
+        # Intenta desencriptar el dato
+        decrypted_data = cipher_suite.decrypt(encrypted_data.encode()).decode()
+        return decrypted_data
+    except binascii.Error as e:
+        raise ValueError("Invalid encrypted data: incorrect padding")
+    except Exception as e:
+        traceback.print_exc()
+        raise ValueError("Decryption failed")

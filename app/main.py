@@ -7,6 +7,7 @@ app = FastAPI()
 app.include_router(users_router, prefix="/api/v1/user")
 app.include_router(auth_router, prefix="/api/v1/auth")
 
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to Apisecure!"}

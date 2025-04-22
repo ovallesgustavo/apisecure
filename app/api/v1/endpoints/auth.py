@@ -1,14 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.security import verify_password
 from app.db.models import User
-from app.schemas.user import UserLogin
-from app.utils.jwt import create_access_token, create_refresh_token, decode_token
-from app.utils.redis_utils import is_key_in_redis, add_to_redis
 from app.db.session import get_db
+from app.schemas.user import UserLogin
+from app.schemas.token import TokenResponse
+from app.utils.jwt import (
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    invalidate_refresh_token,
+    is_refresh_token_valid)
+from app.utils.redis_utils import is_key_in_redis, add_to_redis
 from datetime import datetime, timedelta
 from app.core.security import oauth2_scheme
-import logging
 
 
 router = APIRouter()
@@ -24,11 +29,6 @@ def login_user(user_credentials: UserLogin, db: Session = Depends(get_db)):
     access_token = create_access_token({"sub": db_user.email})
     refresh_token = create_refresh_token({"sub": db_user.email})
     return {"access_token": access_token, "refresh_token": refresh_token}
-
-
-# Configurar el logger
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
 
 @router.post("/logout")
@@ -58,3 +58,31 @@ def logout_user(token_credentials=Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail="Invalid token")
 
     return {"message": "Successfully logged out"}
+
+
+@router.post("/refresh", response_model=TokenResponse)
+def refresh_token(refresh_token: str):
+    """
+    Refresca el access_token usando un refresh_token válido.
+    Invalida el refresh_token después de su uso.
+    """
+    try:
+        # Verificar si el refresh_token es válido
+        if not is_refresh_token_valid(refresh_token):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
+
+        # Decodificar el refresh_token para obtener el payload
+        payload = decode_token(refresh_token)
+        if not payload or "sub" not in payload:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token payload")
+
+        # Crear un nuevo access_token
+        new_access_token = create_access_token({"sub": payload["sub"]})
+
+        # Invalidar el refresh_token usado
+        invalidate_refresh_token(refresh_token)
+
+        return {"access_token": new_access_token, "token_type": "bearer"}
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Failed to refresh token")
