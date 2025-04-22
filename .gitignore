@@ -1,0 +1,16 @@
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+
+# Entorno virtual
+env/
+.venv/
+
+# Archivos de configuración local y secretos
+.env
+
+# Archivos de base de datos locales
+test_db.db
+
+# Archivos de logs
+*.log
