@@ -23,4 +23,4 @@ API segura construida con FastAPI, PostgreSQL, JWT, Alembic y SQLAlchemy.
    docker-compose up --build
    ```
 
-2. Acceder a la API en `http://localhost:8000/docs`.
+2. Acceder a la Documentación Interactiva del API en `http://localhost:8000/docs`.
