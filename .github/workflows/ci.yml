@@ -20,9 +20,9 @@ jobs:
       db:
         image: postgres:16
         env:
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
         ports:
           - 5432:5432
         options: >-
@@ -33,11 +33,10 @@ jobs:
 
       redis:
         image: redis:7
-        command: ["redis-server", "--requirepass", "${{ env.REDIS_PASSWORD }}"]
         ports:
           - 6379:6379
         options: >-
-          --health-cmd "redis-cli -a ${{ env.REDIS_PASSWORD }} ping"
+          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -55,17 +54,24 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install flake8 pytest
+          pip install flake8 pytest redis
 
-      - name: Wait for DB and Redis to be ready
+      - name: Wait for Postgres to be ready
         run: |
           until pg_isready -h localhost -p 5432; do echo "Waiting for Postgres..."; sleep 2; done
-          until redis-cli -a $REDIS_PASSWORD ping | grep PONG; do echo "Waiting for Redis..."; sleep 2; done
-        env:
-          REDIS_PASSWORD: ${{ env.REDIS_PASSWORD }}
+
+      - name: Wait for Redis to be ready
+        run: |
+          until redis-cli -h localhost ping | grep PONG; do echo "Waiting for Redis..."; sleep 2; done
 
       - name: Run flake8 (code style check)
         run: flake8 .
 
       - name: Run pytest (tests)
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          REDIS_PASSWORD: ${{ env.REDIS_PASSWORD }}
         run: pytest --maxfail=1 --disable-warnings -v
+
