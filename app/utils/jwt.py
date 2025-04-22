@@ -1,8 +1,12 @@
 from datetime import datetime, timedelta
+
 from jose import JWTError, jwt
+
 from app.core.config import settings
-from app.utils.crypto_utils import encrypt_data, decrypt_data
-from app.utils.redis_utils import add_to_redis, is_key_in_redis, delete_from_redis
+from app.utils.crypto_utils import decrypt_data, encrypt_data
+from app.utils.redis_utils import (add_to_redis, delete_from_redis,
+                                   is_key_in_redis)
+
 
 def create_access_token(data: dict):
     """
@@ -33,10 +37,16 @@ def create_refresh_token(data: dict):
     if "sub" in to_encode:
         to_encode["sub"] = encrypt_data(to_encode["sub"])
 
-    refresh_token = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+    refresh_token = jwt.encode(
+        to_encode, settings.secret_key, algorithm=settings.algorithm
+    )
 
     # Almacenar el refresh token en Redis con expiración
-    add_to_redis(refresh_token, data["sub"], expiration=timedelta(days=settings.refresh_token_expire_days))
+    add_to_redis(
+        refresh_token,
+        data["sub"],
+        expiration=timedelta(days=settings.refresh_token_expire_days),
+    )
 
     return refresh_token
 
@@ -61,7 +71,9 @@ def decode_token(token: str):
     """
     try:
         # Decodificar el token
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(
+            token, settings.secret_key, algorithms=[settings.algorithm]
+        )
 
         # Desencriptar el campo 'sub' (email)
         if "sub" in payload:

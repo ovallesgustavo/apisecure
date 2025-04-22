@@ -1,18 +1,19 @@
-from datetime import datetime, timedelta
-from typing import Optional
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from cryptography.fernet import Fernet
-from sqlalchemy.orm import Session
-from app.core.config import settings
-from app.db.session import get_db
-from app.db.models import User
-from app.utils.redis_utils import is_key_in_redis
-from app.utils.jwt import decode_token
-import traceback
 import binascii
+import re
+import traceback
+
+from cryptography.fernet import Fernet
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError
+from passlib.context import CryptContext
+from pydantic import BaseModel, validator
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.db.models import User
+from app.db.session import get_db
+from app.utils.jwt import decode_token
 
 # Configuración de pwd_context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -27,13 +28,16 @@ cipher_suite = Fernet(settings.encryption_key.encode())
 
 oauth2_scheme = HTTPBearer()
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verifica si una contraseña en texto plano coincide con su hash."""
     return pwd_context.verify(plain_password, hashed_password)
 
+
 def get_password_hash(password: str) -> str:
     """Genera un hash seguro para una contraseña."""
     return pwd_context.hash(password)
+
 
 def encrypt_data(data: str) -> str:
     """Encripta datos usando Fernet."""
@@ -50,33 +54,46 @@ def decrypt_data(encrypted_data: str) -> str:
         # Intenta desencriptar el dato
         decrypted_data = cipher_suite.decrypt(encrypted_data.encode()).decode()
         return decrypted_data
-    except binascii.Error as e:
+    except binascii.Error:
         raise ValueError("Invalid encrypted data: incorrect padding")
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
         raise ValueError("Decryption failed")
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    """Crea un token JWT con datos encriptados."""
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
+# Definir los requisitos de la contraseña
+PASSWORD_REGEX_UPPERCASE = re.compile(r".*[A-Z].*")  # Al menos una letra mayúscula
+PASSWORD_REGEX_LOWERCASE = re.compile(r".*[a-z].*")  # Al menos una letra minúscula
+PASSWORD_REGEX_DIGIT = re.compile(r".*\d.*")  # Al menos un número
+PASSWORD_REGEX_SPECIAL = re.compile(
+    r".*[-.*+/$].*"
+)  # Al menos uno de los símbolos permitidos: . * + / - $
+PASSWORD_MIN_LENGTH = 9  # Longitud mínima de 9 caracteres
 
-    # Encripta el email antes de incluirlo en el payload
-    if "email" in to_encode:
-        to_encode["email"] = encrypt_data(to_encode["email"])
 
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+class PasswordValidationModel(BaseModel):
+    password: str
+
+    @validator("password")
+    def validate_password(cls, value):
+        if not PASSWORD_REGEX_UPPERCASE.match(value):
+            raise ValueError("La contraseña debe tener al menos una letra mayúscula")
+        if not PASSWORD_REGEX_LOWERCASE.match(value):
+            raise ValueError("La contraseña debe tener al menos una letra minúscula")
+        if not PASSWORD_REGEX_DIGIT.match(value):
+            raise ValueError("La contraseña debe tener al menos un número")
+        if not PASSWORD_REGEX_SPECIAL.match(value):
+            raise ValueError("La contraseña debe tener al menos un símbolo especial")
+        if len(value) < PASSWORD_MIN_LENGTH:
+            raise ValueError(
+                "La contraseña debe tener una longitud mínima de 9 caracteres"
+            )
+        return value
 
 
 def get_current_user(
     token_credentials: HTTPAuthorizationCredentials = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     try:
         # Extraer el token real del objeto HTTPAuthorizationCredentials
@@ -85,24 +102,37 @@ def get_current_user(
         # Decodificar el token
         payload = decode_token(token)
         if not payload:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")     
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+            )
 
         try:
             email = payload.get("sub")
-        except binascii.Error as e:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid encrypted data")
-        except Exception as e:
+        except binascii.Error:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid encrypted data",
+            )
+        except Exception:
             traceback.print_exc()
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Decryption error")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Decryption error"
+            )
 
         # Consultar el usuario en la base de datos
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+            )
         return user
 
-    except JWTError as jwt_error:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    except Exception as e:
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
+    except Exception:
         traceback.print_exc()
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unexpected error")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Unexpected error"
+        )

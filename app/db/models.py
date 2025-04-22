@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Boolean, Column, Integer, String
+
 from app.db.base import Base
+
 
 class User(Base):
     __tablename__ = "users"
@@ -9,3 +11,6 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
+
+    class Config:
+        from_attributes = True

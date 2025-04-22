@@ -1,6 +1,6 @@
-fastapi==0.103.1  # Compatible con Pydantic 2.x
+fastapi==0.115.12  # Compatible con Pydantic 2.x
 uvicorn==0.23.2
-sqlalchemy==2.0.21
+sqlalchemy==2.0.40
 psycopg2-binary==2.9.9
 alembic==1.12.0
 python-jose[cryptography]==3.3.0
@@ -10,3 +10,6 @@ python-dotenv==1.0.0
 passlib==1.7.4
 redis==4.5.5
 bcrypt<4.1.1
+pytest==8.3.5
+pytest-cov==6.1.1
+pytest-mock==3.14.0

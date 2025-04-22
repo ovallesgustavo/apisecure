@@ -1,20 +1,17 @@
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.core.security import verify_password
+
+from app.core.security import oauth2_scheme, verify_password
 from app.db.models import User
 from app.db.session import get_db
-from app.schemas.user import UserLogin
 from app.schemas.token import TokenResponse
-from app.utils.jwt import (
-    create_access_token,
-    create_refresh_token,
-    decode_token,
-    invalidate_refresh_token,
-    is_refresh_token_valid)
-from app.utils.redis_utils import is_key_in_redis, add_to_redis
-from datetime import datetime, timedelta
-from app.core.security import oauth2_scheme
-
+from app.schemas.user import UserLogin
+from app.utils.jwt import (create_access_token, create_refresh_token,
+                           decode_token, invalidate_refresh_token,
+                           is_refresh_token_valid)
+from app.utils.redis_utils import add_to_redis, is_key_in_redis
 
 router = APIRouter()
 
@@ -23,7 +20,9 @@ router = APIRouter()
 def login_user(user_credentials: UserLogin, db: Session = Depends(get_db)):
     # Buscar al usuario en la base de datos
     db_user = db.query(User).filter(User.email == user_credentials.email).first()
-    if not db_user or not verify_password(user_credentials.password, db_user.hashed_password):
+    if not db_user or not verify_password(
+        user_credentials.password, db_user.hashed_password
+    ):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     access_token = create_access_token({"sub": db_user.email})
@@ -52,9 +51,11 @@ def logout_user(token_credentials=Depends(oauth2_scheme)):
             raise HTTPException(status_code=401, detail="Token has been revoked")
 
         # Agregar el token a la lista negra en Redis
-        add_to_redis(token, "blacklisted", expiration=timedelta(seconds=expiration_time))
+        add_to_redis(
+            token, "blacklisted", expiration=timedelta(seconds=expiration_time)
+        )
 
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
 
     return {"message": "Successfully logged out"}
@@ -69,12 +70,18 @@ def refresh_token(refresh_token: str):
     try:
         # Verificar si el refresh_token es válido
         if not is_refresh_token_valid(refresh_token):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired refresh token",
+            )
 
         # Decodificar el refresh_token para obtener el payload
         payload = decode_token(refresh_token)
         if not payload or "sub" not in payload:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token payload")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token payload",
+            )
 
         # Crear un nuevo access_token
         new_access_token = create_access_token({"sub": payload["sub"]})
@@ -84,5 +91,7 @@ def refresh_token(refresh_token: str):
 
         return {"access_token": new_access_token, "token_type": "bearer"}
 
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Failed to refresh token")
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Failed to refresh token"
+        )

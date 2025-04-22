@@ -1,6 +1,5 @@
 from cryptography.fernet import Fernet
 
-
 # Clave de encriptación para el email
 encryption_key: str = "9B7yFgX-fsSMkSsqk4qcb6id1V4xCCg_ZwffBXCnzgE="
 

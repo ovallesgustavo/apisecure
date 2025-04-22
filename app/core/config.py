@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     postgres_user: str = "postgres"
     postgres_password: str = "postgres"
@@ -13,13 +14,13 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
 
     app_env: str = "development"
-    
+
     # Clave de encriptación para el email
     encryption_key: str = "9B7yFgX-fsSMkSsqk4qcb6id1V4xCCg_ZwffBXCnzgE="
 
     # Configuración de Redis
     redis_host: str = "redis"  # Host de Redis (por defecto "redis" si usas Docker)
-    redis_port: int = 6379     # Puerto de Redis
+    redis_port: int = 6379  # Puerto de Redis
     redis_decode_responses: bool = True  # Decodificar respuestas a strings
     redis_password: str = "password"  # Contraseña de Redis
 
@@ -33,5 +34,6 @@ class Settings(BaseSettings):
             f"postgresql://{self.postgres_user}:{self.postgres_password}@"
             f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
+
 
 settings = Settings()
