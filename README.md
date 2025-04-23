@@ -70,7 +70,6 @@ docker-compose exec app alembic upgrade head
 ## 🤝 Contribuciones
 
 ¡Contribuciones y mejoras son bienvenidas!  
-Por favor, abre issues o pull requests para colaborar.
 
 ---
 
