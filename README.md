@@ -67,12 +67,6 @@ docker-compose exec app alembic upgrade head
 
 ---
 
-## 📖 Documentación Adicional
-
-Para más detalles sobre la configuración, desarrollo y despliegue, consulta la carpeta `docs/` o el wiki del proyecto.
-
----
-
 ## 🤝 Contribuciones
 
 ¡Contribuciones y mejoras son bienvenidas!  
