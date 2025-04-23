@@ -12,10 +12,10 @@ Diseñada para ofrecer autenticación avanzada, gestión de tokens y protección
 ---
 
 ## 📁 Estructura del Proyecto
-
+```code
 alembic/ Migraciones de la base de datos
 app/ Código principal de la aplicación
-├── api/ Endpoints RESTful
+├── api/ Endpoints
 ├── core/ Configuración global y settings
 ├── db/ Modelos y sesión de base de datos
 ├── schemas/ Esquemas Pydantic para validación
@@ -23,23 +23,25 @@ app/ Código principal de la aplicación
 └── utils/ Utilidades (JWT, helpers, etc.)
 docker-compose.yml Configuración para levantar contenedores Docker
 requirements.txt Dependencias del proyecto
+```
 
 ---
 
 ## ⚙️ Instalación & Ejecución Local
 
 1. Clona el repositorio y navega al directorio del proyecto.
-
+```code
 git clone https://github.com/ovallesgustavo/apisecure.git
+```
 
 2. Construye y levanta los contenedores Docker:
-
+```code
 docker-compose up --build
-
+```
 3. Ejecuta las migraciones dentro del contenedor para sincronizar la base de datos:
-
+```code
 docker-compose exec app alembic upgrade head
-
+```
 4. Accede a la documentación interactiva de la API en:
 
 [http://localhost:8000/docs](http://localhost:8000/docs)
@@ -65,39 +67,6 @@ docker-compose exec app alembic upgrade head
 
 ---
 
-## 📸 Capturas de Pantalla
-
-![Documentación Swagger](docs/swagger_screenshot.png)  
-*Documentación interactiva generada automáticamente.*
-
-![Ejemplo de autenticación](docs/auth_example.png)  
-*Flujo de autenticación con JWT.*
-
-*(Agrega aquí imágenes relevantes para mostrar la app en acción)*
-
----
-
-## 🚀 Despliegue en Producción
-
-Para desplegar la aplicación en un servidor o entorno productivo, sigue estos pasos básicos:
-
-1. Configura las variables de entorno en un archivo `.env` seguro con tus credenciales y secretos.
-
-2. Construye la imagen Docker:
-
-docker build -t apisecure:latest .
-
-3. Sube la imagen a un registro (Docker Hub, GitHub Container Registry, etc.).
-
-4. En el servidor de producción, ejecuta:
-
-docker-compose up -d
-docker-compose exec app alembic upgrade head
-
-5. Configura un proxy reverso (Nginx, Traefik) para exponer la API con HTTPS.
-
----
-
 ## 📖 Documentación Adicional
 
 Para más detalles sobre la configuración, desarrollo y despliegue, consulta la carpeta `docs/` o el wiki del proyecto.
@@ -118,5 +87,3 @@ Este proyecto está bajo licencia MIT - mira el archivo [LICENSE](LICENSE) para 
 ---
 
 > **Apisecure** — Construye APIs seguras y escalables con confianza. 🚀
-
----
